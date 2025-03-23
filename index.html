@@ -178,7 +178,7 @@
 <body>
     <div class="container">
         <header>
-            <h1 class="title">My Garden</h1>
+            <h1 class="title"><a href="index.html" style="text-decoration: none; color: inherit;">My Garden</a></h1>
             <button class="login-btn">Login</button>
         </header>
 
@@ -245,18 +245,20 @@
         // Check if user is already logged in
         const { data: { user } } = await supabaseClient.auth.getUser();
         
-        if (user) {
-            // If logged in, redirect to controller
-            window.location.href = 'controller.html';
-            return;
-        }
-        
-        // Add event listener to login button
+        // Update login button text and behavior if user is logged in
         const loginBtn = document.querySelector('.login-btn');
         if (loginBtn) {
-            loginBtn.addEventListener('click', function() {
-                window.location.href = 'login.html';
-            });
+            if (user) {
+                loginBtn.textContent = 'Go to Controller';
+                loginBtn.addEventListener('click', function() {
+                    window.location.href = 'controller.html';
+                });
+            } else {
+                loginBtn.textContent = 'Login';
+                loginBtn.addEventListener('click', function() {
+                    window.location.href = 'login.html';
+                });
+            }
         }
         
         // Specific user ID to fetch data for
