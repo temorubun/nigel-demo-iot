@@ -469,10 +469,10 @@
             if (!pumpStatus) return;
             
             if (statusPillElement) {
-                const displayStatus = pumpStatus.pump_status === 'ON' ? 'Active' : 'Inactive';
+                const displayStatus = pumpStatus.pump_status === 'Active' ? 'Active' : 'Inactive';
                 statusPillElement.textContent = displayStatus;
                 
-                if (pumpStatus.pump_status === 'ON') {
+                if (pumpStatus.pump_status === 'Active') {
                     statusPillElement.style.backgroundColor = '#ecfdf5';
                     statusPillElement.style.color = '#059669';
                 } else {
@@ -482,11 +482,11 @@
             }
             
             if (pumpButtonElement) {
-                if (pumpStatus.pump_status === 'ON') {
-                    pumpButtonElement.textContent = 'TURN OFF';
+                if (pumpStatus.pump_status === 'Active') {
+                    pumpButtonElement.textContent = 'OFF';
                     pumpButtonElement.classList.add('off');
                 } else {
-                    pumpButtonElement.textContent = 'TURN ON';
+                    pumpButtonElement.textContent = 'ON';
                     pumpButtonElement.classList.remove('off');
                 }
             }
@@ -537,7 +537,7 @@
             pumpButton.addEventListener('click', async function() {
                 if (!currentUser || !pumpStatus) return;
                 
-                const newStatus = pumpStatus.pump_status === 'ON' ? 'OFF' : 'ON';
+                const newStatus = pumpStatus.pump_status === 'Active' ? 'Inactive' : 'Active';
                 try {
                     // Update status pompa yang ada
                     const { data, error } = await supabaseClient
@@ -553,7 +553,7 @@
                         .insert([
                             {
                                 user_id: currentUser.id,
-                                action: `Pump turned ${newStatus}`
+                                action: `Pump set to ${newStatus}`
                             }
                         ]);
                     
