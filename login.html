@@ -261,70 +261,70 @@
         </div>
     </div>
 
-    <!-- Add Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-    // Supabase configuration
-    const SUPABASE_URL = 'https://ebcxzwyraceskdjjkmow.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViY3h6d3lyYWNlc2tkamprbW93Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MDgxMTksImV4cCI6MjA1ODQ4NDExOX0.ws_-_4sYXqsuplrAr37pbzGgT6IHSGSCeKshqvryJF0';
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-analytics.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-auth.js";
 
-    // Initialize Supabase client
-    const { createClient } = supabase;
-    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAXTVYLCD7DMtaGDA33EST3o__KeblGLoQ",
+            authDomain: "mygarden-cbe1a.firebaseapp.com", 
+            projectId: "mygarden-cbe1a",
+            storageBucket: "mygarden-cbe1a.firebasestorage.app",
+            messagingSenderId: "960866845440",
+            appId: "1:960866845440:web:f7d1f3516bfbf9c08629e5",
+            measurementId: "G-KC3EGY4PFR"
+        };
 
-    // Add login functionality
-    document.addEventListener('DOMContentLoaded', async function() {
-        // Check if user is already logged in
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        
-        if (user) {
-            // If already logged in, redirect to controller
-            window.location.href = 'controller.html';
-            return;
-        }
-        
-        const loginForm = document.querySelector('form');
-        const loginError = document.getElementById('login-error');
-        
-        // Handle form submission
-        loginForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            
-            loginError.textContent = '';
-            
-            try {
-                const { data, error } = await supabaseClient.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
-                
-                if (error) {
-                    loginError.textContent = error.message || 'Failed to sign in. Please check your credentials.';
-                    return;
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const auth = getAuth(app);
+
+        // Check auth state on load
+        document.addEventListener('DOMContentLoaded', function() {
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    // User is signed in, redirect to controller
+                    window.location.href = 'controller.html';
                 }
+            });
+
+            const loginForm = document.querySelector('form');
+            const loginError = document.getElementById('login-error');
+
+            // Handle form submission
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+
+                loginError.textContent = '';
+
+                try {
+                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    // Login successful, redirect to controller
+                    window.location.href = 'controller.html';
+                } catch (error) {
+                    console.error('Login error:', error);
+                    loginError.textContent = error.message || 'Failed to sign in. Please check your credentials.';
+                }
+            });
+
+            // Toggle password visibility
+            const togglePassword = document.getElementById('togglePassword');
+            if (togglePassword) {
+                const passwordInput = document.getElementById('password');
                 
-                // Login successful, redirect to controller
-                window.location.href = 'controller.html';
-            } catch (error) {
-                console.error('Login error:', error);
-                loginError.textContent = 'An unexpected error occurred. Please try again.';
+                togglePassword.addEventListener('click', function() {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                });
             }
         });
-        
-        // Toggle password visibility if the button exists
-        const togglePassword = document.getElementById('togglePassword');
-        if (togglePassword) {
-            const passwordInput = document.getElementById('password');
-            
-            togglePassword.addEventListener('click', function() {
-                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-                passwordInput.setAttribute('type', type);
-            });
-        }
-    });
     </script>
 </body>
 </html>
