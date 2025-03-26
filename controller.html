@@ -4,6 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Garden - Controller</title>
+    
+    <!-- Update CSP untuk mengizinkan semua resource yang dibutuhkan -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self' data: gap: https://* 'unsafe-eval' 'unsafe-inline';
+        script-src 'self' https://* 'unsafe-inline' 'unsafe-eval';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' https://* data: blob:;
+        media-src *;
+        connect-src *;
+    ">
+    
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg width='24' height='22' viewBox='0 0 24 22' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12.75 3.49999C9.06563 3.49999 5.94844 5.91405 4.88906 9.24218C6.46406 8.4453 8.24062 7.99999 10.125 7.99999H14.25C14.6625 7.99999 15 8.33749 15 8.74999C15 9.16249 14.6625 9.49999 14.25 9.49999H13.5H10.125C9.34687 9.49999 8.59219 9.58905 7.86563 9.75311C6.65156 10.0297 5.52188 10.5219 4.51875 11.1922C1.79531 13.0062 0 16.1047 0 19.625V20.375C0 20.9984 0.501562 21.5 1.125 21.5C1.74844 21.5 2.25 20.9984 2.25 20.375V19.625C2.25 17.3422 3.22031 15.2891 4.77188 13.85C5.7 17.3891 8.92031 20 12.75 20H12.7969C18.9891 19.9672 24 13.8641 24 6.34061C24 4.34374 23.6484 2.4453 23.0109 0.734364C22.8891 0.410926 22.4156 0.424989 22.2516 0.729676C21.3703 2.37968 19.6266 3.49999 17.625 3.49999H12.75Z' fill='%23059669'/%3E%3C/svg%3E">
     <style>
         /* Reset and base styles */
@@ -324,249 +335,148 @@
         </div>
     </div>
 
-    <!-- Add Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-    // Konfigurasi Supabase
-    const SUPABASE_URL = 'https://ebcxzwyraceskdjjkmow.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViY3h6d3lyYWNlc2tkamprbW93Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MDgxMTksImV4cCI6MjA1ODQ4NDExOX0.ws_-_4sYXqsuplrAr37pbzGgT6IHSGSCeKshqvryJF0';
+    <!-- Add Firebase -->
+    <script type="module">
+        // Import Firebase modules dari CDN
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getDatabase, ref, onValue, set, push, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // Inisialisasi Supabase client
-    const { createClient } = supabase;
-    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAXTVYLCD7DMtaGDA33EST3o__KeblGLoQ",
+            authDomain: "mygarden-cbe1a.firebaseapp.com",
+            databaseURL: "https://mygarden-cbe1a-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "mygarden-cbe1a",
+            storageBucket: "mygarden-cbe1a.firebasestorage.app",
+            messagingSenderId: "960866845440",
+            appId: "1:960866845440:web:f7d1f3516bfbf9c08629e5",
+            measurementId: "G-KC3EGY4PFR"
+        };
 
-    // Fungsi controller
-    document.addEventListener('DOMContentLoaded', async function() {
-        let currentUser = null;
-        let sensorData = null;
-        let pumpStatus = null;
-        
-        // Cek status login
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        currentUser = user;
-        
-        if (!currentUser) {
-            window.location.href = 'login.html';
-            return;
-        }
-        
-        // Update email pengguna di dropdown
-        const userEmailElement = document.getElementById('user-email');
-        if (userEmailElement) {
-            userEmailElement.textContent = currentUser.email;
-        }
+        try {
+            const app = initializeApp(firebaseConfig);
+            const analytics = getAnalytics(app);
+            const auth = getAuth();
+            const db = getDatabase();
 
-        // Tampilkan loading state
-        const soilStatusElement = document.getElementById('soil-status');
-        const moistureLevelElement = document.getElementById('moisture-level');
-        const temperatureElement = document.getElementById('temperature');
-        const humidityElement = document.getElementById('humidity');
-        const statusPillElement = document.getElementById('pump-status');
-        const pumpButtonElement = document.getElementById('pump-control-button');
-
-        soilStatusElement.textContent = 'Soil Status: Loading...';
-        moistureLevelElement.textContent = 'Moisture Level: Loading...';
-        temperatureElement.textContent = 'Loading...';
-        humidityElement.textContent = 'Loading...';
-        statusPillElement.textContent = 'Loading...';
-        pumpButtonElement.textContent = 'LOADING...';
-        
-        // Ambil data sensor
-        async function fetchSensorData() {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('sensors')
-                    .select('*')
-                    .eq('user_id', currentUser.id)
-                    .order('recorded_at', { ascending: false })
-                    .limit(1)
-                    .single();
-                    
-                if (!error && data) {
-                    sensorData = data;
-                    updateSensorDisplay();
-                }
-            } catch (error) {
-                console.error('Error fetching sensor data:', error);
-            }
-        }
-        
-        // Ambil status pompa
-        async function fetchPumpStatus() {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('water_pump')
-                    .select('*')
-                    .eq('user_id', currentUser.id)
-                    .single();
-                    
-                if (!error && data) {
-                    pumpStatus = data;
-                    updatePumpDisplay();
-                }
-            } catch (error) {
-                console.error('Error fetching pump status:', error);
-            }
-        }
-
-        // Fetch initial data
-        await Promise.all([fetchSensorData(), fetchPumpStatus()]);
-        
-        // Setup real-time subscriptions
-        supabaseClient
-            .channel('sensors')
-            .on('postgres_changes', 
-                { 
-                    event: '*', 
-                    schema: 'public', 
-                    table: 'sensors',
-                    filter: `user_id=eq.${currentUser.id}`
-                }, 
-                async (payload) => {
-                    await fetchSensorData();
-                }
-            )
-            .subscribe();
+            // Toggle dropdown pengaturan
+            const settingsButton = document.getElementById('settingsButton');
+            const settingsDropdown = document.getElementById('settingsDropdown');
             
-        supabaseClient
-            .channel('water_pump')
-            .on('postgres_changes', 
-                { 
-                    event: '*', 
-                    schema: 'public', 
-                    table: 'water_pump',
-                    filter: `user_id=eq.${currentUser.id}`
-                }, 
-                async (payload) => {
-                    await fetchPumpStatus();
-                }
-            )
-            .subscribe();
-        
-        // Update tampilan sensor
-        function updateSensorDisplay() {
-            if (!sensorData) return;
-            
-            if (soilStatusElement) {
-                const status = getSoilStatus(sensorData.moisture_level);
-                soilStatusElement.textContent = `Soil Status: ${status}`;
-            }
-            
-            if (moistureLevelElement) {
-                moistureLevelElement.textContent = `Moisture Level: ${sensorData.moisture_level}%`;
-            }
-            
-            if (temperatureElement) {
-                temperatureElement.textContent = `${sensorData.temperature}°C`;
-            }
-            
-            if (humidityElement) {
-                humidityElement.textContent = `${sensorData.humidity}%`;
-            }
-        }
-        
-        // Update tampilan pompa
-        function updatePumpDisplay() {
-            if (!pumpStatus) return;
-            
-            if (statusPillElement) {
-                const displayStatus = pumpStatus.pump_status === 'Active' ? 'Active' : 'Inactive';
-                statusPillElement.textContent = displayStatus;
-                
-                if (pumpStatus.pump_status === 'Active') {
-                    statusPillElement.style.backgroundColor = '#ecfdf5';
-                    statusPillElement.style.color = '#059669';
+            // Cek status auth user
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    // Update email pengguna di dropdown
+                    const userEmailElement = document.getElementById('user-email');
+                    if (userEmailElement) {
+                        userEmailElement.textContent = user.email;
+                    }
                 } else {
-                    statusPillElement.style.backgroundColor = '#fee2e2';
-                    statusPillElement.style.color = '#ef4444';
-                }
-            }
-            
-            if (pumpButtonElement) {
-                if (pumpStatus.pump_status === 'Active') {
-                    pumpButtonElement.textContent = 'OFF';
-                    pumpButtonElement.classList.add('off');
-                } else {
-                    pumpButtonElement.textContent = 'ON';
-                    pumpButtonElement.classList.remove('off');
-                }
-            }
-        }
-        
-        // Get soil status berdasarkan moisture level
-        function getSoilStatus(moistureLevel) {
-            if (moistureLevel < 30) return 'Dry';
-            if (moistureLevel < 60) return 'Moderate';
-            return 'Healthy';
-        }
-        
-        // Toggle dropdown pengaturan
-        const settingsButton = document.getElementById('settingsButton');
-        const settingsDropdown = document.getElementById('settingsDropdown');
-        
-        settingsButton.addEventListener('click', function(event) {
-            settingsDropdown.classList.toggle('show');
-            event.stopPropagation();
-        });
-        
-        // Tutup dropdown saat klik di luar
-        window.addEventListener('click', function() {
-            if (settingsDropdown.classList.contains('show')) {
-                settingsDropdown.classList.remove('show');
-            }
-        });
-        
-        // Tombol logout
-        const logoutButton = document.getElementById('logout-button');
-        if (logoutButton) {
-            logoutButton.addEventListener('click', async function() {
-                try {
-                    const { error } = await supabaseClient.auth.signOut();
-                    if (error) throw error;
-                    
-                    window.location.href = 'index.html';
-                } catch (error) {
-                    console.error('Error signing out:', error);
-                    alert('Failed to sign out. Please try again.');
+                    // Redirect ke halaman login jika tidak ada user
+                    window.location.href = 'login.html';
                 }
             });
-        }
-        
-        // Tombol kontrol pompa
-        const pumpButton = document.getElementById('pump-control-button');
-        if (pumpButton) {
-            pumpButton.addEventListener('click', async function() {
-                if (!currentUser || !pumpStatus) return;
-                
-                const newStatus = pumpStatus.pump_status === 'Active' ? 'Inactive' : 'Active';
-                try {
-                    // Update status pompa yang ada
-                    const { data, error } = await supabaseClient
-                        .from('water_pump')
-                        .update({ pump_status: newStatus })
-                        .eq('user_id', currentUser.id);
-                        
-                    if (error) throw error;
-                    
-                    // Log aktivitas
-                    await supabaseClient
-                        .from('activity_log')
-                        .insert([
-                            {
-                                user_id: currentUser.id,
-                                action: `Pump set to ${newStatus}`
-                            }
-                        ]);
-                    
-                    // Refresh pump status setelah update
-                    await fetchPumpStatus();
-                } catch (error) {
-                    console.error('Error updating pump status:', error);
-                    alert('Failed to update pump status. Please try again.');
+
+            // Event listener untuk tombol settings
+            settingsButton.addEventListener('click', function(event) {
+                settingsDropdown.classList.toggle('show');
+                event.stopPropagation();
+            });
+
+            // Event listener untuk tombol logout
+            const logoutButton = document.getElementById('logoutButton');
+            if (logoutButton) {
+                logoutButton.addEventListener('click', () => {
+                    signOut(auth).then(() => {
+                        window.location.href = 'login.html';
+                    }).catch((error) => {
+                        console.error('Logout error:', error);
+                    });
+                });
+            }
+
+            // Tutup dropdown ketika klik di luar
+            document.addEventListener('click', function(event) {
+                if (!settingsButton.contains(event.target)) {
+                    settingsDropdown.classList.remove('show');
                 }
             });
+
+            // Fungsi untuk memuat data sensor
+            function loadSensorData() {
+                const sensorRef = ref(db, 'sensors/Sensor_Kebun_Sawi');
+                onValue(sensorRef, (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        updateSensorDisplay(data);
+                    }
+                });
+            }
+
+            // Fungsi untuk update tampilan sensor
+            function updateSensorDisplay(data) {
+                document.getElementById('soil-status').textContent = `Soil Status: ${getSoilStatus(data.moisture_level)}`;
+                document.getElementById('moisture-level').textContent = `Moisture Level: ${data.moisture_level}%`;
+                document.getElementById('temperature').textContent = `${data.temperature}°C`;
+                document.getElementById('humidity').textContent = `${data.humidity}%`;
+            }
+
+            // Fungsi untuk mendapatkan status soil
+            function getSoilStatus(moistureLevel) {
+                if (moistureLevel < 30) return 'Dry';
+                if (moistureLevel < 60) return 'Moderate';
+                return 'Healthy';
+            }
+
+            // Fungsi untuk memuat status pompa
+            function loadPumpStatus() {
+                const pumpRef = ref(db, 'water_pump/Pompa_Kebun_Sawi');
+                onValue(pumpRef, (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        updatePumpDisplay(data);
+                    }
+                });
+            }
+
+            // Fungsi untuk update tampilan pompa
+            function updatePumpDisplay(data) {
+                const statusElement = document.getElementById('pump-status');
+                const buttonElement = document.getElementById('pump-control-button');
+                
+                statusElement.textContent = data.pump_status;
+                buttonElement.textContent = data.pump_status === 'Active' ? 'OFF' : 'ON';
+                buttonElement.classList.toggle('off', data.pump_status === 'Active');
+            }
+
+            // Fungsi untuk mengontrol pompa
+            function togglePump() {
+                const pumpRef = ref(db, 'water_pump/Pompa_Kebun_Sawi');
+                get(pumpRef).then((snapshot) => {
+                    const currentStatus = snapshot.val().pump_status;
+                    const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
+                    set(pumpRef, {
+                        pump_status: newStatus
+                    });
+                });
+            }
+
+            // Inisialisasi data saat halaman dimuat
+            document.addEventListener('DOMContentLoaded', () => {
+                loadSensorData();
+                loadPumpStatus();
+
+                // Tambahkan event listener untuk tombol kontrol pompa
+                const pumpButton = document.getElementById('pump-control-button');
+                pumpButton.addEventListener('click', togglePump);
+            });
+
+        } catch (error) {
+            console.error("Firebase initialization error:", error);
+            document.getElementById('soil-status').textContent = 'Error loading data';
         }
-    });
     </script>
 </body>
 </html>
